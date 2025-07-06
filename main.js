@@ -5,7 +5,7 @@
 // @name:ja            IG助手
 // @name:ko            IG조수
 // @namespace          https://github.snkms.com/
-// @version            3.4.4
+// @version            3.6.2
 // @description        Downloading is possible for both photos and videos from posts, as well as for stories, reels or profile picture.
 // @description:zh-TW  一鍵下載對方 Instagram 貼文中的相片、影片甚至是他們的限時動態、連續短片及大頭貼圖片！
 // @description:zh-CN  一键下载对方 Instagram 帖子中的相片、视频甚至是他们的快拍、Reels及头像图片！
@@ -58,7 +58,9 @@
         'FORCE_FETCH_ALL_RESOURCES': false,
         'DIRECT_DOWNLOAD_VISIBLE_RESOURCE': false,
         'DIRECT_DOWNLOAD_ALL': false,
+        'DIRECT_DOWNLOAD_STORY': false,
         'MODIFY_VIDEO_VOLUME': false,
+        'MODIFY_RESOURCE_EXIF': false,
         'SCROLL_BUTTON': true,
         'FORCE_RESOURCE_VIA_MEDIA': false,
         'USE_BLOB_FETCH_WHEN_MEDIA_RATE_LIMIT': false,
@@ -75,7 +77,8 @@
         THUMBNAIL: '<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="#000000"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-4.86 8.86l-3 3.87L9 13.14 6 17h12l-3.86-5.14z"/></svg>',
         DOWNLOAD_ALL: '<svg xmlns="http://www.w3.org/2000/svg" enable-background="new 0 0 24 24" height="24px" viewBox="0 0 24 24" width="24px" fill="#000000"><g><rect fill="none" height="24" width="24"/></g><g><g><polygon points="18,6.41 16.59,5 12,9.58 7.41,5 6,6.41 12,12.41"/><polygon points="18,13 16.59,11.59 12,16.17 7.41,11.59 6,13 12,19"/></g></g></svg>',
         CLOSE: '<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="#000000"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>',
-        FULLSCREEN: '<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="#000000"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>'
+        FULLSCREEN: '<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="#000000"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>',
+        TURN_DEG: '<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="#1f1f1f"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M7.34 6.41L.86 12.9l6.49 6.48 6.49-6.48-6.5-6.49zM3.69 12.9l3.66-3.66L11 12.9l-3.66 3.66-3.65-3.66zm15.67-6.26C17.61 4.88 15.3 4 13 4V.76L8.76 5 13 9.24V6c1.79 0 3.58.68 4.95 2.05 2.73 2.73 2.73 7.17 0 9.9C16.58 19.32 14.79 20 13 20c-.97 0-1.94-.21-2.84-.61l-1.49 1.49C10.02 21.62 11.51 22 13 22c2.3 0 4.61-.88 6.36-2.64 3.52-3.51 3.52-9.21 0-12.72z"/></svg>'
     };
 
     /*******************************/
@@ -336,33 +339,40 @@
         let highStories = await getHighlightStories(highlightId);
         let username = highStories.data.reels_media[0].owner.username;
 
-        let complete = 0;
-        setDownloadProgress(complete, highStories.data.reels_media[0].items.length);
+        if (USER_SETTING.DIRECT_DOWNLOAD_STORY) {
 
-        highStories.data.reels_media[0].items.forEach((item, idx) => {
-            setTimeout(() => {
-                if (USER_SETTING.RENAME_PUBLISH_DATE) {
-                    timestamp = item.taken_at_timestamp;
-                }
+            let complete = 0;
+            setDownloadProgress(complete, highStories.data.reels_media[0].items.length);
 
-                item.display_resources.sort(function (a, b) {
-                    if (a.config_width < b.config_width) return 1;
-                    if (a.config_width > b.config_width) return -1;
-                    return 0;
-                });
+            highStories.data.reels_media[0].items.forEach((item, idx) => {
+                setTimeout(() => {
+                    if (USER_SETTING.RENAME_PUBLISH_DATE) {
+                        timestamp = item.taken_at_timestamp;
+                    }
 
-                if (item.is_video) {
-                    saveFiles(item.video_resources[0].src, username, "stories", timestamp, 'mp4', item.id).then(() => {
-                        setDownloadProgress(++complete, highStories.data.reels_media[0].items.length);
+                    item.display_resources.sort(function (a, b) {
+                        if (a.config_width < b.config_width) return 1;
+                        if (a.config_width > b.config_width) return -1;
+                        return 0;
                     });
-                }
-                else {
-                    saveFiles(item.display_resources[0].src, username, "stories", timestamp, 'jpg', item.id).then(() => {
-                        setDownloadProgress(++complete, highStories.data.reels_media[0].items.length);
-                    });
-                }
-            }, 100 * idx);
-        });
+
+                    if (item.is_video) {
+                        saveFiles(item.video_resources[0].src, username, "highlights", timestamp, 'mp4', item.id).then(() => {
+                            setDownloadProgress(++complete, highStories.data.reels_media[0].items.length);
+                        });
+                    }
+                    else {
+                        saveFiles(item.display_resources[0].src, username, "highlights", timestamp, 'jpg', item.id).then(() => {
+                            setDownloadProgress(++complete, highStories.data.reels_media[0].items.length);
+                        });
+                    }
+                }, 100 * idx);
+            });
+        }
+        else {
+            IG_createDM(false, true);
+            createStoryListDOM(highStories, 'highlights');
+        }
     }
 
     /**
@@ -1463,206 +1473,262 @@
      * @return {void}
      */
     async function onReels(isDownload, isVideo, isPreview) {
-        if (isDownload) {
-            updateLoadingBar(true);
+        try {
+            if (isDownload) {
+                updateLoadingBar(true);
 
-            let reelsPath = location.href.split('?').at(0).split('instagram.com/reels/').at(-1).replaceAll('/', '');
-            let result = await getBlobMedia(reelsPath);
-            let media = filterResourceData(result.data);
+                let reelsPath = location.href.split('?').at(0).split('instagram.com/reels/').at(-1).replaceAll('/', '');
+                let result = await getBlobMedia(reelsPath);
+                let media = filterResourceData(result.data);
 
-            let timestamp = new Date().getTime();
+                let timestamp = new Date().getTime();
 
-            if (USER_SETTING.RENAME_PUBLISH_DATE) {
+                if (USER_SETTING.RENAME_PUBLISH_DATE) {
+                    if (result.type === 'query_hash') {
+                        timestamp = media.taken_at_timestamp;
+                    }
+                    else {
+                        timestamp = media.taken_at;
+                    }
+                }
+
                 if (result.type === 'query_hash') {
-                    timestamp = media.shortcode_media.taken_at_timestamp;
+                    if (isVideo && media.is_video) {
+                        if (isPreview) {
+                            openNewTab(media.video_url);
+                        }
+                        else {
+                            let type = 'mp4';
+                            saveFiles(media.video_url, media.owner.username, "reels", timestamp, type, reelsPath);
+                        }
+                    }
+                    else {
+                        if (isPreview) {
+                            openNewTab(media.display_resources.at(-1).src);
+                        }
+                        else {
+                            let type = 'jpg';
+                            saveFiles(media.display_resources.at(-1).src, media.owner.username, "reels", timestamp, type, reelsPath);
+                        }
+                    }
                 }
                 else {
-                    timestamp = media.taken_at;
+                    if (isVideo && media.video_versions != null) {
+                        if (isPreview) {
+                            openNewTab(media.video_versions[0].url);
+                        }
+                        else {
+                            let type = 'mp4';
+                            saveFiles(media.video_versions[0].url, media.owner.username, "reels", timestamp, type, reelsPath);
+                        }
+                    }
+                    else {
+                        if (isPreview) {
+                            openNewTab(media.image_versions2.candidates[0].url);
+                        }
+                        else {
+                            let type = 'jpg';
+                            saveFiles(media.image_versions2.candidates[0].url, media.owner.username, "reels", timestamp, type, reelsPath);
+                        }
+                    }
                 }
-            }
 
-            if (result.type === 'query_hash') {
-                if (isVideo && media.shortcode_media.is_video) {
-                    if (isPreview) {
-                        openNewTab(media.shortcode_media.video_url);
-                    }
-                    else {
-                        let type = 'mp4';
-                        saveFiles(media.shortcode_media.video_url, media.shortcode_media.owner.username, "reels", timestamp, type, reelsPath);
-                    }
-                }
-                else {
-                    if (isPreview) {
-                        openNewTab(media.shortcode_media.display_resources.at(-1).src);
-                    }
-                    else {
-                        let type = 'jpg';
-                        saveFiles(media.shortcode_media.display_resources.at(-1).src, media.shortcode_media.owner.username, "reels", timestamp, type, reelsPath);
-                    }
-                }
+                updateLoadingBar(false);
             }
             else {
-                if (isVideo && media.video_versions != null) {
-                    if (isPreview) {
-                        openNewTab(media.video_versions[0].url);
+                //$('.IG_REELS_THUMBNAIL, .IG_REELS').remove();
+                var timer = setInterval(() => {
+                    if ($('section > main[role="main"] > div div.x1qjc9v5 video').length > 0) {
+                        clearInterval(timer);
+
+                        if (USER_SETTING.SCROLL_BUTTON) {
+                            $('#scrollWrapper').remove();
+                            $('section > main[role="main"]').append('<section id="scrollWrapper"></section>');
+                            $('section > main[role="main"] > #scrollWrapper').append('<div class="button-up"><div></div></div>');
+                            $('section > main[role="main"] > #scrollWrapper').append('<div class="button-down"><div></div></div>');
+
+                            $('section > main[role="main"] > #scrollWrapper > .button-up').on('click', function () {
+                                $('section > main[role="main"] > div')[0].scrollBy({ top: -30, behavior: "smooth" });
+                            });
+                            $('section > main[role="main"] > #scrollWrapper > .button-down').on('click', function () {
+                                $('section > main[role="main"] > div')[0].scrollBy({ top: 30, behavior: "smooth" });
+                            });
+                        }
+
+                        // reels scroll has [tabindex] but header not.
+                        $('section > main[role="main"] > div[tabindex], section > main[role="main"] > div[class]').children('div').each(function () {
+                            if ($(this).children().length > 0) {
+                                if (!$(this).children().find('.IG_REELS').length) {
+                                    var $main = $(this);
+
+                                    $(this).children().css('position', 'relative');
+
+                                    $(this).children().append(`<div data-ih-locale-title="DW" title="${_i18n("DW")}" class="IG_REELS">${SVG.DOWNLOAD}</div>`);
+                                    $(this).children().append(`<div data-ih-locale-title="NEW_TAB" title="${_i18n("NEW_TAB")}" class="IG_REELS_NEWTAB">${SVG.NEW_TAB}</div>`);
+                                    $(this).children().append(`<div data-ih-locale-title="THUMBNAIL_INTRO" title="${_i18n("THUMBNAIL_INTRO")}" class="IG_REELS_THUMBNAIL">${SVG.THUMBNAIL}</div>`);
+
+                                    // Disable video autoplay
+                                    if (USER_SETTING.DISABLE_VIDEO_LOOPING) {
+                                        $(this).find('video').each(function () {
+                                            $(this).on('ended', function () {
+                                                if (!$(this).data('loop')) {
+                                                    let $element_play_button = $(this).next().find('div[role="presentation"] > div svg > path[d^="M5.888"]').parents('button[role="button"], div[role="button"]');
+                                                    if ($element_play_button.length > 0) {
+                                                        $(this).attr('data-loop', true);
+                                                        $element_play_button.trigger("click");
+                                                        logger('Adding video event listener #loop, then paused click()');
+                                                    }
+                                                    else {
+                                                        $(this).attr('data-loop', true);
+                                                        $(this).parent().find('.xpgaw4o').removeAttr('style');
+                                                        this.pause();
+                                                        logger('Adding video event listener #loop, then paused pause()');
+                                                    }
+                                                }
+                                            });
+                                        });
+                                    }
+
+                                    // Modify video volume
+                                    //if(USER_SETTING.MODIFY_VIDEO_VOLUME){
+                                    //    $(this).find('video').each(function(){
+                                    //        $(this).on('play playing', function(){
+                                    //            if(!$(this).data('modify')){
+                                    //                $(this).attr('data-modify', true);
+                                    //                this.volume = VIDEO_VOLUME;
+                                    //                logger('(reel) Added video event listener #modify');
+                                    //            }
+                                    //        });
+                                    //    });
+                                    //}
+
+                                    if (USER_SETTING.HTML5_VIDEO_CONTROL) {
+                                        $(this).find('video').each(function () {
+                                            if (!$(this).data('controls')) {
+                                                let $video = $(this);
+
+                                                logger('(reel) Added video html5 contorller #modify');
+
+                                                if (USER_SETTING.MODIFY_VIDEO_VOLUME) {
+                                                    this.volume = state.videoVolume;
+
+                                                    $(this).on('loadstart', function () {
+                                                        this.volume = state.videoVolume;
+                                                    });
+                                                }
+
+                                                // Restore layout to show details interface
+                                                $(this).on('contextmenu', function (e) {
+                                                    e.preventDefault();
+                                                    $video.css('z-index', '-1');
+                                                    $video.removeAttr('controls');
+                                                });
+
+                                                // Hide layout to show controller
+                                                $(this).parent().find('video + div div[role="button"]').filter(function () {
+                                                    return $(this).parent('div[role="presentation"]').length > 0 && $(this).css('cursor') === 'pointer' && $(this).attr('style') != null;
+                                                }).first().on('contextmenu', function (e) {
+                                                    e.preventDefault();
+                                                    $video.css('z-index', '2');
+                                                    $video.attr('controls', true);
+                                                });
+
+
+                                                $(this).on('volumechange', function () {
+                                                    // eslint-disable-next-line no-unused-vars
+                                                    let $element_mute_button = $(this).parent().find('video + div > div').find('button[type="button"], div[role="button"]').filter(function (idx) {
+                                                        // This is mute/unmute's icon
+                                                        return $(this).width() <= 64 && $(this).height() <= 64 && $(this).find('svg > path[d^="M16.636 7.028a1.5"], svg > path[d^="M1.5 13.3c-.8"]').length > 0;
+                                                    });
+
+                                                    var is_elelment_muted = $element_mute_button.find('svg > path[d^="M16.636"]').length === 0;
+
+                                                    if (this.muted != is_elelment_muted) {
+                                                        this.volume = state.videoVolume;
+                                                        $element_mute_button?.trigger("click");
+                                                    }
+
+                                                    if ($(this).attr('data-completed')) {
+                                                        state.videoVolume = this.volume;
+                                                        GM_setValue('G_VIDEO_VOLUME', this.volume);
+                                                    }
+
+                                                    if (this.volume == state.videoVolume) {
+                                                        $(this).attr('data-completed', true);
+                                                    }
+                                                });
+
+                                                $(this).css('position', 'absolute');
+                                                $(this).css('z-index', '2');
+                                                $(this).attr('data-controls', true);
+                                                $(this).attr('controls', true);
+                                            }
+                                        });
+                                    }
+
+                                    var $videos = $main.find('video');
+                                    var $buttonParent = $(this).find('div[role="presentation"] > div[role="button"] > div').first();
+                                    toggleVolumeSilder($videos, $buttonParent, 'reel');
+                                }
+                            }
+                        });
                     }
-                    else {
-                        let type = 'mp4';
-                        saveFiles(media.video_versions[0].url, media.owner.username, "reels", timestamp, type, reelsPath);
-                    }
+                }, 250);
+            }
+        }
+        catch (err) {
+            console.error("[reels]", err);
+        }
+    }
+
+    /**
+     * createStoryListDOM
+     * @description ??
+     *
+     * @return {void}
+     */
+    async function createStoryListDOM(obj, type) {
+        try {
+            $('.IG_POPUP_DIG #post_info').text(`${type} ID: ${obj.data.reels_media[0].id}`);
+            const selector = '.IG_POPUP_DIG .IG_POPUP_DIG_MAIN .IG_POPUP_DIG_BODY';
+
+            obj.data.reels_media[0].items.forEach((item, idx) => {
+                let date = new Date().getTime();
+                let timestamp = Math.floor(date / 1000);
+                let username = obj.data.reels_media[0]?.user?.username || obj.data.reels_media[0]?.owner?.username;
+
+                if (USER_SETTING.RENAME_PUBLISH_DATE) {
+                    timestamp = item.taken_at_timestamp;
+                }
+
+                item.display_resources.sort(function (a, b) {
+                    if (a.config_width < b.config_width) return 1;
+                    if (a.config_width > b.config_width) return -1;
+                    return 0;
+                });
+
+                if (item.is_video) {
+                    $(selector).append(`<a media-id="${item.id}" datetime="${timestamp}" data-blob="true" data-needed="direct" data-name="${type}" data-type="mp4" data-username="${username}" data-path="${item.id}" data-globalIndex="${idx + 1}" href="javascript:;" data-href="${item.video_resources[0].src}"><img width="100" src="${item.display_resources[0].src}" /><br/>- <span data-ih-locale-title="VID">${_i18n("VID")}</span> ${idx} -</a>`);
                 }
                 else {
-                    if (isPreview) {
-                        openNewTab(media.image_versions2.candidates[0].url);
-                    }
-                    else {
-                        let type = 'jpg';
-                        saveFiles(media.image_versions2.candidates[0].url, media.owner.username, "reels", timestamp, type, reelsPath);
-                    }
+                    $(selector).append(`<a media-id="${item.id}" datetime="${timestamp}" data-blob="true" data-needed="direct" data-name="${type}" data-type="jpg" data-username="${username}" data-path="${item.id}" data-globalIndex="${idx + 1}" href="javascript:;" data-href="${item.display_resources[0].src}"><img width="100" src="${item.display_resources[0].src}" /><br/>- <span data-ih-locale-title="IMG">${_i18n("IMG")}</span> ${idx} -</a>`);
                 }
-            }
+            });
+
+            $('.IG_POPUP_DIG .IG_POPUP_DIG_MAIN .IG_POPUP_DIG_BODY a').each(function () {
+                $(this).wrap('<div></div>');
+                $(this).before('<label class="inner_box_wrapper"><input class="inner_box" type="checkbox"><span></span></label>');
+                $(this).after(`<div data-ih-locale-title="NEW_TAB" title="${_i18n("NEW_TAB")}" class="newTab">${SVG.NEW_TAB}</div>`);
+
+                if ($(this).attr('data-type') == 'mp4') {
+                    $(this).after(`<div data-ih-locale-title="THUMBNAIL_INTRO" title="${_i18n("THUMBNAIL_INTRO")}" class="videoThumbnail">${SVG.THUMBNAIL}</div>`);
+                }
+            });
 
             updateLoadingBar(false);
         }
-        else {
-            //$('.IG_REELS_THUMBNAIL, .IG_REELS').remove();
-            var timer = setInterval(() => {
-                if ($('section > main[role="main"] > div div.x1qjc9v5 video').length > 0) {
-                    clearInterval(timer);
-
-                    if (USER_SETTING.SCROLL_BUTTON) {
-                        $('#scrollWrapper').remove();
-                        $('section > main[role="main"]').append('<section id="scrollWrapper"></section>');
-                        $('section > main[role="main"] > #scrollWrapper').append('<div class="button-up"><div></div></div>');
-                        $('section > main[role="main"] > #scrollWrapper').append('<div class="button-down"><div></div></div>');
-
-                        $('section > main[role="main"] > #scrollWrapper > .button-up').on('click', function () {
-                            $('section > main[role="main"] > div')[0].scrollBy({ top: -30, behavior: "smooth" });
-                        });
-                        $('section > main[role="main"] > #scrollWrapper > .button-down').on('click', function () {
-                            $('section > main[role="main"] > div')[0].scrollBy({ top: 30, behavior: "smooth" });
-                        });
-                    }
-
-                    // reels scroll has [tabindex] but header not.
-                    $('section > main[role="main"] > div[tabindex]').children('div').each(function () {
-                        if ($(this).children().length > 0) {
-                            if (!$(this).children().find('.IG_REELS').length) {
-                                var $main = $(this);
-
-                                $(this).children().css('position', 'relative');
-
-                                $(this).children().append(`<div data-ih-locale-title="DW" title="${_i18n("DW")}" class="IG_REELS">${SVG.DOWNLOAD}</div>`);
-                                $(this).children().append(`<div data-ih-locale-title="NEW_TAB" title="${_i18n("NEW_TAB")}" class="IG_REELS_NEWTAB">${SVG.NEW_TAB}</div>`);
-                                $(this).children().append(`<div data-ih-locale-title="THUMBNAIL_INTRO" title="${_i18n("THUMBNAIL_INTRO")}" class="IG_REELS_THUMBNAIL">${SVG.THUMBNAIL}</div>`);
-
-                                // Disable video autoplay
-                                if (USER_SETTING.DISABLE_VIDEO_LOOPING) {
-                                    $(this).find('video').each(function () {
-                                        $(this).on('ended', function () {
-                                            if (!$(this).data('loop')) {
-                                                let $element_play_button = $(this).next().find('div[role="presentation"] > div svg > path[d^="M5.888"]').parents('button[role="button"], div[role="button"]');
-                                                if ($element_play_button.length > 0) {
-                                                    $(this).attr('data-loop', true);
-                                                    $element_play_button.trigger("click");
-                                                    logger('Adding video event listener #loop, then paused click()');
-                                                }
-                                                else {
-                                                    $(this).attr('data-loop', true);
-                                                    $(this).parent().find('.xpgaw4o').removeAttr('style');
-                                                    this.pause();
-                                                    logger('Adding video event listener #loop, then paused pause()');
-                                                }
-                                            }
-                                        });
-                                    });
-                                }
-
-                                // Modify video volume
-                                //if(USER_SETTING.MODIFY_VIDEO_VOLUME){
-                                //    $(this).find('video').each(function(){
-                                //        $(this).on('play playing', function(){
-                                //            if(!$(this).data('modify')){
-                                //                $(this).attr('data-modify', true);
-                                //                this.volume = VIDEO_VOLUME;
-                                //                logger('(reel) Added video event listener #modify');
-                                //            }
-                                //        });
-                                //    });
-                                //}
-
-                                if (USER_SETTING.HTML5_VIDEO_CONTROL) {
-                                    $(this).find('video').each(function () {
-                                        if (!$(this).data('controls')) {
-                                            let $video = $(this);
-
-                                            logger('(reel) Added video html5 contorller #modify');
-
-                                            if (USER_SETTING.MODIFY_VIDEO_VOLUME) {
-                                                this.volume = state.videoVolume;
-
-                                                $(this).on('loadstart', function () {
-                                                    this.volume = state.videoVolume;
-                                                });
-                                            }
-
-                                            // Restore layout to show details interface
-                                            $(this).on('contextmenu', function (e) {
-                                                e.preventDefault();
-                                                $video.css('z-index', '-1');
-                                                $video.removeAttr('controls');
-                                            });
-
-                                            // Hide layout to show controller
-                                            $(this).parent().find('video + div div[role="button"]').filter(function () {
-                                                return $(this).parent('div[role="presentation"]').length > 0 && $(this).css('cursor') === 'pointer' && $(this).attr('style') != null;
-                                            }).first().on('contextmenu', function (e) {
-                                                e.preventDefault();
-                                                $video.css('z-index', '2');
-                                                $video.attr('controls', true);
-                                            });
-
-
-                                            $(this).on('volumechange', function () {
-                                                // eslint-disable-next-line no-unused-vars
-                                                let $element_mute_button = $(this).parent().find('video + div > div').find('button[type="button"], div[role="button"]').filter(function (idx) {
-                                                    // This is mute/unmute's icon
-                                                    return $(this).width() <= 64 && $(this).height() <= 64 && $(this).find('svg > path[d^="M16.636 7.028a1.5"], svg > path[d^="M1.5 13.3c-.8"]').length > 0;
-                                                });
-
-                                                var is_elelment_muted = $element_mute_button.find('svg > path[d^="M16.636"]').length === 0;
-
-                                                if (this.muted != is_elelment_muted) {
-                                                    this.volume = state.videoVolume;
-                                                    $element_mute_button?.trigger("click");
-                                                }
-
-                                                if ($(this).attr('data-completed')) {
-                                                    state.videoVolume = this.volume;
-                                                    GM_setValue('G_VIDEO_VOLUME', this.volume);
-                                                }
-
-                                                if (this.volume == state.videoVolume) {
-                                                    $(this).attr('data-completed', true);
-                                                }
-                                            });
-
-                                            $(this).css('position', 'absolute');
-                                            $(this).css('z-index', '2');
-                                            $(this).attr('data-controls', true);
-                                            $(this).attr('controls', true);
-                                        }
-                                    });
-                                }
-
-                                var $videos = $main.find('video');
-                                var $buttonParent = $(this).find('div[role="presentation"] > div[role="button"] > div').first();
-                                toggleVolumeSilder($videos, $buttonParent, 'reel');
-                            }
-                        }
-                    });
-                }
-            }, 250);
+        catch (err) {
+            console.error('createStoryListDOM()', err);
         }
     }
 
@@ -1683,33 +1749,39 @@
         let userId = userInfo.user.pk;
         let stories = await getStories(userId);
 
-        let complete = 0;
-        setDownloadProgress(complete, stories.data.reels_media[0].items.length);
+        if (USER_SETTING.DIRECT_DOWNLOAD_STORY) {
+            let complete = 0;
+            setDownloadProgress(complete, stories.data.reels_media[0].items.length);
 
-        stories.data.reels_media[0].items.forEach((item, idx) => {
-            setTimeout(() => {
-                if (USER_SETTING.RENAME_PUBLISH_DATE) {
-                    timestamp = item.taken_at_timestamp;
-                }
+            stories.data.reels_media[0].items.forEach((item, idx) => {
+                setTimeout(() => {
+                    if (USER_SETTING.RENAME_PUBLISH_DATE) {
+                        timestamp = item.taken_at_timestamp;
+                    }
 
-                item.display_resources.sort(function (a, b) {
-                    if (a.config_width < b.config_width) return 1;
-                    if (a.config_width > b.config_width) return -1;
-                    return 0;
-                });
-
-                if (item.is_video) {
-                    saveFiles(item.video_resources[0].src, username, "stories", timestamp, 'mp4', item.id).then(() => {
-                        setDownloadProgress(++complete, stories.data.reels_media[0].items.length);
+                    item.display_resources.sort(function (a, b) {
+                        if (a.config_width < b.config_width) return 1;
+                        if (a.config_width > b.config_width) return -1;
+                        return 0;
                     });
-                }
-                else {
-                    saveFiles(item.display_resources[0].src, username, "stories", timestamp, 'jpg', item.id).then(() => {
-                        setDownloadProgress(++complete, stories.data.reels_media[0].items.length);
-                    });
-                }
-            }, 100 * idx);
-        });
+
+                    if (item.is_video) {
+                        saveFiles(item.video_resources[0].src, username, "stories", timestamp, 'mp4', item.id).then(() => {
+                            setDownloadProgress(++complete, stories.data.reels_media[0].items.length);
+                        });
+                    }
+                    else {
+                        saveFiles(item.display_resources[0].src, username, "stories", timestamp, 'jpg', item.id).then(() => {
+                            setDownloadProgress(++complete, stories.data.reels_media[0].items.length);
+                        });
+                    }
+                }, 100 * idx);
+            });
+        }
+        else {
+            IG_createDM(false, true);
+            createStoryListDOM(stories, 'stories');
+        }
     }
 
     /**
@@ -2924,11 +2996,11 @@
 
         const originally = username + '_' + original_name + '.' + filetype;
         const downloadName = USER_SETTING.AUTO_RENAME ? filename + '.' + filetype : originally;
-        if (filetype === 'jpg' && shortcode && sourceType === 'photo' && (object.type === 'image/jpeg' || object.type === 'image/webp')) {
-            stripExifAndAttachPostUrltoExif(object, shortcode)
+        if (USER_SETTING.MODIFY_RESOURCE_EXIF && filetype === 'jpg' && shortcode && sourceType === 'photo' && (object.type === 'image/jpeg' || object.type === 'image/webp')) {
+            changeExifData(object, shortcode)
                 .then(newBlob => triggerDownload(newBlob, downloadName))
                 .catch(err => {
-                    console.error('Failed to strip EXIF and/or attach post URL to EXIF.”', err);
+                    console.error('Failed to strip EXIF and/or attach post URL to EXIF.', err);
                     triggerDownload(object, downloadName);
                 });
         } else {
@@ -2937,14 +3009,14 @@
     }
 
     /**
-     * stripExifAndAttachPostUrltoExif
+     * changeExifData
      * @description Strips EXIF metadata and attaches post URLs to the EXIF of downloaded image resources
      *
      * @param  {Object}  blob
      * @param  {string}  shortcode
      * @return {Blob}
      */
-    async function stripExifAndAttachPostUrltoExif(blob, shortcode) {
+    async function changeExifData(blob, shortcode) {
         const concat = (...arr) => {
             const len = arr.reduce((s, a) => s + a.length, 0);
             const out = new Uint8Array(len);
@@ -3116,6 +3188,30 @@
                     });
 
                     resource_url = result.items[0].image_versions2.candidates[0].url;
+
+                    const getWidthFromURL = function (obj) {
+                        if (obj.width != null) {
+                            return obj.width;
+                        }
+
+                        const url = new URL(obj.url);
+                        const stp = url.searchParams.get('stp');
+
+                        if (stp != null) {
+                            return parseInt(stp.match(/_p([0-9]+)x([0-9]+)_/i)?.at(1) || -1);
+                        }
+                        else {
+                            return 0;
+                        }
+                    }
+
+                    const resourceWidth = getWidthFromURL(result.items[0].image_versions2.candidates[0]);
+                    if (
+                        result.items[0].original_width !== resourceWidth &&
+                        resourceWidth !== -1
+                    ) {
+                        // alert();
+                    }
                 }
 
                 if (isPreview) {
@@ -3499,29 +3595,57 @@
             `<div id="imageViewer">
     	<div id="iv_header">
     		<div style="flex:1;">Image Viewer</div>
+    		<div style="display: flex;filter: invert(1);gap: 8px;margin-right: 8px;">
+                <div id="rotate_left" style="cursor: pointer;">${SVG.TURN_DEG}</div>
+                <div id="rotate_right" style="transform: scaleX(-1);cursor: pointer;">${SVG.TURN_DEG}</div>
+            </div>
     		<div id="iv_close">${SVG.CLOSE}</div>
     	</div>
-        <img id="iv_image" src="" />
+        <section>
+            <div id="iv_transform">
+                <div id="iv_rotate">
+                    <img id="iv_image" src="" />
+                </div>
+            </div>
+        </section>
     </div>`);
 
         const $container = $('#imageViewer');
+        const $section = $('#imageViewer > section');
+        const $wrapT = $('#iv_transform');
+        const $wrapR = $('#iv_rotate');
         const $header = $('#iv_header');
         const $closeIcon = $('#iv_close');
         const $image = $('#iv_image');
+        const $rotateLeft = $('#rotate_left');
+        const $rotateRight = $('#rotate_right');
 
         $image.attr('src', imageUrl);
         $container.css('display', 'flex');
+        $wrapT.css('transform-origin', '0 0');
+        $wrapT.css('transition', `transform 0.15s ease`);
+        $wrapR.css('transform-origin', 'center');
+        $wrapR.css('transition', `transform 0.15s ease`);
+        $wrapT.css('will-change', 'transform');
+        $wrapR.css('will-change', 'transform');
 
-        let scale = 0.75;
+        let rotate = 0;
+        let scale = 1;
         let posX = 0, posY = 0;
         let isDragging = false;
         let isMovingPhoto = false;
         let startX, startY;
-        var previousPosition = $image.position();
+        var previousPosition = {
+            x: 0,
+            y: 0
+        };
 
         detectMovingViewerTimer = setInterval(() => {
-            const currentPosition = $image.position();
-            if (currentPosition.left !== previousPosition.left || currentPosition.top !== previousPosition.top) {
+            const currentPosition = {
+                x: posX,
+                y: posY
+            };
+            if (currentPosition.x !== previousPosition.x || currentPosition.y !== previousPosition.y) {
                 isMovingPhoto = true;
             } else {
                 isMovingPhoto = false;
@@ -3529,9 +3653,10 @@
             previousPosition = currentPosition;
         }, 100);
 
+
         $image.on('load', () => {
-            posX = (window.innerWidth - $image[0].width) / 2;
-            posY = (window.innerHeight - $image[0].height) / 2;
+            posX = 0;
+            posY = 0;
             updateImageStyle();
         });
 
@@ -3544,34 +3669,53 @@
             e.stopPropagation();
 
             if (!isMovingPhoto) {
-                if (scale <= 0.8) {
-                    scale += 1.25;
-                    scale = Math.min(Math.max(0.75, scale), 5);
+                if (scale <= 1) {
+                    makeZoomAction(e, Math.min(Math.max(1, scale + 1.25), 5));
                 }
                 else {
-                    scale = 0.75;
+                    scale = 1;
+                    posX = 0;
+                    posY = 0;
                 }
+
                 updateImageStyle();
             }
         });
 
-        $image.on('wheel', (e) => {
+        $section.on('wheel', (e) => {
             e.preventDefault();
-            scale += e.originalEvent.deltaY > 0 ? -0.15 : 0.15;
-            scale = Math.min(Math.max(0.75, scale), 5);
-            updateImageStyle();
+            makeZoomAction(e);
+        });
+
+        $container.on('wheel', (e) => {
+            e.preventDefault();
         });
 
         $image.on('mousedown', (e) => {
+            if (scale == 1) return;
+
             isDragging = true;
+
             startX = e.pageX - posX;
             startY = e.pageY - posY;
             $image.css('cursor', 'grabbing');
         });
 
         $image.on('mouseup', () => {
+            if (scale == 1) return;
+
             isDragging = false;
             $image.css('cursor', 'grab');
+        });
+
+        $rotateLeft.on('click', function () {
+            rotate -= 90;
+            updateImageStyle();
+        });
+
+        $rotateRight.on('click', function () {
+            rotate += 90;
+            updateImageStyle();
         });
 
         $(document).on('mousemove.igHelper', (e) => {
@@ -3598,9 +3742,46 @@
         });
 
         function updateImageStyle() {
-            $image.css('transform', `scale(${scale})`);
-            $image.css('left', `${posX}px`);
-            $image.css('top', `${posY}px`);
+            $wrapT.css('transition', isMovingPhoto ? "none" : `transform 0.15s ease`);
+            $wrapT.css('transform', `translate(${posX}px, ${posY}px) scale(${scale})`);
+            $wrapR.css('transform', `rotate(${rotate}deg)`);
+
+            if (scale == 1) {
+                $image.css('cursor', 'zoom-in');
+            }
+            else {
+                $image.css('cursor', 'grabbing');
+            }
+        }
+
+
+        function makeZoomAction(e, newScale) {
+            e.preventDefault();
+
+            let prevScale = scale;
+
+            // newScale should be null when passing by wheel event
+            if (newScale == null) {
+                let factor = 0.1;
+                let delta = e.originalEvent.deltaY < 0 ? 1 : -1;
+                scale = Math.min(5, Math.max(1, scale + delta * factor * scale));
+            }
+            else {
+                scale = newScale;
+            }
+
+
+            let rect = $section[0].getBoundingClientRect();
+            let mx = e.clientX - rect.left;
+            let my = e.clientY - rect.top;
+
+            let zoomTargetX = (mx - posX) / prevScale;
+            let zoomTargetY = (my - posY) / prevScale;
+
+            posX = -zoomTargetX * scale + mx;
+            posY = -zoomTargetY * scale + my;
+
+            updateImageStyle();
         }
     }
 
@@ -3662,6 +3843,7 @@
                 "DIRECT_DOWNLOAD_VISIBLE_RESOURCE": "Directly Download the Visible Resources in the Post",
                 "DIRECT_DOWNLOAD_ALL": "Directly Download All Resources in the Post",
                 "MODIFY_VIDEO_VOLUME": "Modify Video Volume (Right-Click to Set)",
+                "MODIFY_RESOURCE_EXIF": "Modify Resource EXIF ​​Properties",
                 "SCROLL_BUTTON": "Enable Scroll Buttons for Reels Page",
                 "FORCE_RESOURCE_VIA_MEDIA": "Force Fetch Resource via Media API",
                 "USE_BLOB_FETCH_WHEN_MEDIA_RATE_LIMIT": "Use Alternative Methods to Download When the Media API is Not Accessible",
@@ -3682,7 +3864,10 @@
                 "USE_BLOB_FETCH_WHEN_MEDIA_RATE_LIMIT_INTRO": "When the Media API reaches its rate limit or cannot be used for other reasons, the Forced Fetch API will be used to download resources (the resource quality may be slightly lower).",
                 "NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST_INTRO": "The [Open in New Tab] button in posts will always use the Media API to obtain high-resolution resources.",
                 "SKIP_VIEW_STORY_CONFIRM": "Skip the Confirmation Page for Viewing a Story/Highlight",
-                "SKIP_VIEW_STORY_CONFIRM_INTRO": "Automatically skip when confirmation page is shown in story or highlight."
+                "SKIP_VIEW_STORY_CONFIRM_INTRO": "Automatically skip when confirmation page is shown in story or highlight.",
+                "MODIFY_RESOURCE_EXIF_INTRO": "Modify the EXIF ​​properties of the image resource to place the post link in it.",
+                "DIRECT_DOWNLOAD_STORY": "Directly Download All Resources in the Story/Highlight",
+                "DIRECT_DOWNLOAD_STORY_INTRO": "When you click Download All Resources, whether you want to download all stories/highlights resources directly.",
             }
         };
 
