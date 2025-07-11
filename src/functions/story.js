@@ -7,11 +7,12 @@ import {
 } from "../utils/general";
 import { getUserId, getStories, getMediaInfo } from "../utils/api";
 import { _i18n } from "../utils/i18n";
+import { getImageFromCache } from "../utils/image_cache";
 /*! ESLINT IMPORT END !*/
 
 /**
  * createStoryListDOM
- * @description ??
+ * @description Create a list of story items in the popup dialog.
  *
  * @return {void}
  */
@@ -194,6 +195,17 @@ export async function onStory(isDownload, isForce, isPreview) {
                 mediaId = location.pathname.split('/').filter(s => s.length > 0 && s.match(/^([0-9]{10,})$/)).at(-1);
             }
 
+            const cached = getImageFromCache(mediaId);
+            if (cached) {
+                if (isPreview) {
+                    openNewTab(cached);
+                }
+                else {
+                    saveFiles(cached, username, "stories", timestamp, 'jpg', mediaId);
+                }
+                return;
+            }
+
             let result = await getMediaInfo(mediaId);
 
             if (USER_SETTING.RENAME_PUBLISH_DATE) {
@@ -219,7 +231,7 @@ export async function onStory(isDownload, isForce, isPreview) {
                 }
             }
             else {
-                if (USER_SETTING.USE_BLOB_FETCH_WHEN_MEDIA_RATE_LIMIT) {
+                if (USER_SETTING.FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED) {
                     state.tempFetchRateLimit = true;
                     onStory(isDownload, isForce, isPreview);
                 }
@@ -541,7 +553,7 @@ export async function onStoryThumbnail(isDownload, isForce) {
 
             }
             else {
-                if (USER_SETTING.USE_BLOB_FETCH_WHEN_MEDIA_RATE_LIMIT) {
+                if (USER_SETTING.FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED) {
                     state.tempFetchRateLimit = true;
                     onStoryThumbnail(true, isForce);
                 }

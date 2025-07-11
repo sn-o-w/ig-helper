@@ -7,6 +7,7 @@ import {
 import { _i18n } from "../utils/i18n";
 import { getHighlightStories, getMediaInfo } from "../utils/api";
 import { createStoryListDOM } from "./story";
+import { getImageFromCache } from "../utils/image_cache";
 /*! ESLINT IMPORT END !*/
 
 /**
@@ -107,6 +108,17 @@ export async function onHighlightsStory(isDownload, isPreview) {
             timestamp = target.taken_at_timestamp;
         }
 
+        const cached = getImageFromCache(target.id);
+        if (cached) {
+            if (isPreview) {
+                openNewTab(cached);
+            }
+            else {
+                saveFiles(cached, username, "stories", timestamp, 'jpg', target.id);
+            }
+            return;
+        }
+
         if (USER_SETTING.FORCE_RESOURCE_VIA_MEDIA && !state.tempFetchRateLimit) {
             let result = await getMediaInfo(target.id);
 
@@ -129,7 +141,7 @@ export async function onHighlightsStory(isDownload, isPreview) {
                 }
             }
             else {
-                if (USER_SETTING.USE_BLOB_FETCH_WHEN_MEDIA_RATE_LIMIT) {
+                if (USER_SETTING.FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED) {
                     delete state.GL_dataCache.highlights[highlightId];
                     state.tempFetchRateLimit = true;
 
@@ -307,7 +319,7 @@ export async function onHighlightsStoryThumbnail(isDownload) {
                 saveFiles(result.items[0].image_versions2.candidates[0].url, username, "highlights", timestamp, 'jpg', highlightId);
             }
             else {
-                if (USER_SETTING.USE_BLOB_FETCH_WHEN_MEDIA_RATE_LIMIT) {
+                if (USER_SETTING.FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED) {
                     delete state.GL_dataCache.highlights[highlightId];
                     state.tempFetchRateLimit = true;
 
