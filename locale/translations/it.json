@@ -66,5 +66,5 @@
     "NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST_INTRO": "Il pulsante [Apri in una nuova scheda] nei post utilizzerà sempre l'API Media per ottenere risorse ad alta risoluzione.",
     "SKIP_VIEW_STORY_CONFIRM_INTRO": "Salta automaticamente quando la pagina di conferma viene visualizzata nella storia o nel contenuto in evidenza.",
     "MODIFY_RESOURCE_EXIF_INTRO": "Modifica le proprietà EXIF della risorsa immagine per posizionare il link del post al suo interno.",
-    "DIRECT_DOWNLOAD_STORY_INTRO": "Quando fai clic su Scarica tutte le risorse, tutte le storie e gli elementi in evidenza vengono scaricati direttamente, senza mostrare la finestra di dialogo di selezione delle immagini."
+    "DIRECT_DOWNLOAD_STORY_INTRO": "Quando fai clic su 'Scarica tutte le risorse', tutte le storie e gli elementi in evidenza vengono scaricati direttamente, senza mostrare la finestra di dialogo di selezione delle immagini."
 }
