@@ -636,7 +636,7 @@ export function callNotification() {
  *
  * @return {void}
  */
-export function showSetting () {
+export function showSetting() {
     $('.IG_POPUP_DIG').remove();
     IG_createDM();
 
@@ -707,7 +707,7 @@ export function showSetting () {
  *
  * @return {void}
  */
-export function arrangeSettingHierarchy () {
+export function arrangeSettingHierarchy() {
     Object.entries(PARENT_CHILD_MAP).forEach(([parent, children]) => {
 
         let $prev = $(`.IG_POPUP_DIG .IG_POPUP_DIG_BODY input#${parent}`).closest('label');
