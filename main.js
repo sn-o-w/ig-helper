@@ -68,9 +68,8 @@
         'SCROLL_BUTTON': true,
         'SKIP_VIEW_STORY_CONFIRM': false
     };
-    const CHILD_NODES = ['RENAME_PUBLISH_DATE', 'FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED', 'NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST'];
 
-    const PARENT_CHILD_MAP = {
+    const PARENT_CHILD_MAPPING = {
         'AUTO_RENAME': [
             'RENAME_PUBLISH_DATE'
         ],
@@ -79,6 +78,8 @@
             'NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST'
         ]
     };
+    const IMAGE_CACHE_KEY = 'URLS_OF_IMAGES_TEMPORARILY_STORED';
+    const IMAGE_CACHE_MAX_AGE = 24 * 60 * 60 * 1000; // 24h in ms
     /*******************************/
 
     // Icon download by Google Fonts Material Icon
@@ -96,9 +97,6 @@
     const checkInterval = 250;
     const style = GM_getResourceText("INTERNAL_CSS");
     const locale_manifest = JSON.parse(GM_getResourceText("LOCALE_MANIFEST"));
-
-    const IMAGE_CACHE_KEY = 'URLS_OF_IMAGES_TEMPORARILY_STORED';
-    const IMAGE_CACHE_MAX_AGE = 24 * 60 * 60 * 1000; // 24h in ms
 
     var state = {
         videoVolume: (GM_getValue('G_VIDEO_VOLUME')) ? GM_getValue('G_VIDEO_VOLUME') : 1,
@@ -3443,7 +3441,7 @@
 
         for (const name in USER_SETTING) {
             $body.append(`
-                <label class="globalSettings${CHILD_NODES.includes(name) ? ' child' : ''}"
+                <label class="globalSettings"
                        title="${_i18n(name + '_INTRO')}"
                        data-ih-locale-title="${name + '_INTRO'}">
 
@@ -3459,10 +3457,10 @@
                     e.preventDefault();
                     if (!$(this).find('#tempWrapper').length) {
                         $(this).append('<div id="tempWrapper"></div>')
-                               .children('#tempWrapper')
-                               .append(`<input value="${state.videoVolume}" type="range" min="0" max="1" step="0.05" />`)
-                               .append(`<input value="${state.videoVolume}" step="0.05" type="number" />`)
-                               .append(`<div class="IG_POPUP_DIG_BTN">${SVG.CLOSE}</div>`);
+                            .children('#tempWrapper')
+                            .append(`<input value="${state.videoVolume}" type="range" min="0" max="1" step="0.05" />`)
+                            .append(`<input value="${state.videoVolume}" step="0.05" type="number" />`)
+                            .append(`<div class="IG_POPUP_DIG_BTN">${SVG.CLOSE}</div>`);
                     }
                 });
             }
@@ -3472,9 +3470,9 @@
                     e.preventDefault();
                     if (!$(this).find('#tempWrapper').length) {
                         $(this).append('<div id="tempWrapper"></div>')
-                               .children('#tempWrapper')
-                               .append(`<input id="date_format" value="${state.fileRenameFormat}" />`)
-                               .append(`<div class="IG_POPUP_DIG_BTN">${SVG.CLOSE}</div>`);
+                            .children('#tempWrapper')
+                            .append(`<input id="date_format" value="${state.fileRenameFormat}" />`)
+                            .append(`<div class="IG_POPUP_DIG_BTN">${SVG.CLOSE}</div>`);
                     }
                 });
             }
@@ -3492,12 +3490,13 @@
      * @return {void}
      */
     function arrangeSettingHierarchy() {
-        Object.entries(PARENT_CHILD_MAP).forEach(([parent, children]) => {
+        Object.entries(PARENT_CHILD_MAPPING).forEach(([parent, children]) => {
 
             let $prev = $(`.IG_POPUP_DIG .IG_POPUP_DIG_BODY input#${parent}`).closest('label');
 
             children.forEach(child => {
                 const $childLbl = $(`.IG_POPUP_DIG .IG_POPUP_DIG_BODY input#${child}`).closest('label').detach();
+                $childLbl.addClass("child");
                 $prev.after($childLbl);
                 $prev = $childLbl;
             });
