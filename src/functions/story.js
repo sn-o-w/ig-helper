@@ -50,7 +50,7 @@ export async function createStoryListDOM(obj, type) {
             $(this).after(`<div data-ih-locale-title="NEW_TAB" title="${_i18n("NEW_TAB")}" class="newTab">${SVG.NEW_TAB}</div>`);
 
             if ($(this).attr('data-type') == 'mp4') {
-                $(this).after(`<div data-ih-locale-title="THUMBNAIL_INTRO" title="${_i18n("THUMBNAIL_INTRO")}" class="videoThumbnail">${SVG.THUMBNAIL}</div>`);
+                $(this).after(`<div data-ih-locale-title="VIDEO_THUMBNAIL" title="${_i18n("VIDEO_THUMBNAIL")}" class="videoThumbnail">${SVG.THUMBNAIL}</div>`);
             }
         });
 
@@ -195,15 +195,19 @@ export async function onStory(isDownload, isForce, isPreview) {
                 mediaId = location.pathname.split('/').filter(s => s.length > 0 && s.match(/^([0-9]{10,})$/)).at(-1);
             }
 
-            const cached = getImageFromCache(mediaId);
-            if (cached) {
-                if (isPreview) {
-                    openNewTab(cached);
+            if (USER_SETTING.CAPTURE_IMAGE_VIA_MEDIA_CACHE) {
+                const cached = getImageFromCache(mediaId);
+                // Trigger when resource is not video and trigger type is not preview mode.
+                if (cached && !(!isPreview && stories.data.reels_media[0].items.filter(item => item.id === mediaId).at(0).is_video)) {
+                    logger("[Restore Cached onStory]", mediaId);
+                    if (isPreview) {
+                        openNewTab(cached);
+                    }
+                    else {
+                        saveFiles(cached, username, "stories", timestamp, 'jpg', mediaId);
+                    }
+                    return;
                 }
-                else {
-                    saveFiles(cached, username, "stories", timestamp, 'jpg', mediaId);
-                }
-                return;
             }
 
             let result = await getMediaInfo(mediaId);
@@ -363,11 +367,26 @@ export async function onStory(isDownload, isForce, isPreview) {
             let downloadLink = link;
             let type = 'jpg';
 
+            const mediaId = getImageFromCache(getStoryId(downloadLink) ?? "-");
+
+            if (USER_SETTING.CAPTURE_IMAGE_VIA_MEDIA_CACHE) {
+                const cached = getImageFromCache(mediaId);
+                if (cached) {
+                    if (isPreview) {
+                        openNewTab(cached);
+                    }
+                    else {
+                        saveFiles(cached, username, "stories", timestamp, 'jpg', mediaId);
+                    }
+                    return;
+                }
+            }
+
             if (isPreview) {
                 openNewTab(downloadLink);
             }
             else {
-                saveFiles(downloadLink, username, "stories", timestamp, type, getStoryId(downloadLink) ?? "");
+                saveFiles(downloadLink, username, "stories", timestamp, type, mediaId);
             }
         }
 
@@ -687,7 +706,7 @@ export async function onStoryThumbnail(isDownload, isForce) {
 
             if ($element != null) {
                 $element.first().css('position', 'relative');
-                $element.first().append(`<div data-ih-locale-title="THUMBNAIL_INTRO" title="${_i18n("THUMBNAIL_INTRO")}" class="IG_DWSTORY_THUMBNAIL">${SVG.THUMBNAIL}</div>`);
+                $element.first().append(`<div data-ih-locale-title="VIDEO_THUMBNAIL" title="${_i18n("VIDEO_THUMBNAIL")}" class="IG_DWSTORY_THUMBNAIL">${SVG.THUMBNAIL}</div>`);
             }
 
         }

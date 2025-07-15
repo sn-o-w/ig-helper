@@ -415,15 +415,18 @@ export async function triggerLinkElement(element, isPreview) {
     }
 
     let mediaId = $(element).attr('media-id');
-    const cached = getImageFromCache(mediaId);
 
-    if (cached) {
-        if (isPreview) {
-            openNewTab(cached);
-        } else {
-            saveFiles(cached, username, $(element).data('name'), timestamp, $(element).data('type') || 'jpg', $(element).data('path'));
+    if (USER_SETTING.CAPTURE_IMAGE_VIA_MEDIA_CACHE) {
+        const cached = getImageFromCache(mediaId);
+        // Trigger when resource is not video and trigger type is not preview mode.
+        if (cached && !(!isPreview && $(element).data('type') == "mp4")) {
+            if (isPreview) {
+                openNewTab(cached);
+            } else {
+                saveFiles(cached, username, $(element).data('name'), timestamp, $(element).data('type') || 'jpg', $(element).data('path'));
+            }
+            return;
         }
-        return;
     }
 
     if (USER_SETTING.FORCE_RESOURCE_VIA_MEDIA) {
@@ -550,7 +553,7 @@ export function registerMenuCommand() {
         accessKey: "f"
     }));
 
-    state.registerMenuIds.push(GM_registerMenuCommand(_i18n('CHECK_UPDATE_MENU'), () => {
+    state.registerMenuIds.push(GM_registerMenuCommand(_i18n('CHECK_FOR_UPDATE'), () => {
         callNotification();
     }, {
         accessKey: "c"
@@ -571,7 +574,7 @@ export function registerMenuCommand() {
  * @return {void}
  */
 export function checkingScriptUpdate(interval) {
-    if (!USER_SETTING.CHECK_UPDATE) return;
+    if (!USER_SETTING.CHECK_FOR_UPDATE) return;
 
     const check_timestamp = GM_getValue('G_CHECK_TIMESTAMP') ?? new Date().getTime();
     const now_time = new Date().getTime();
@@ -696,7 +699,7 @@ export function showSetting() {
         }
     }
 
-    $('.IG_POPUP_DIG .IG_POPUP_DIG_BODY input#CHECK_UPDATE').closest('label').prependTo('.IG_POPUP_DIG .IG_POPUP_DIG_BODY');
+    $('.IG_POPUP_DIG .IG_POPUP_DIG_BODY input#CHECK_FOR_UPDATE').closest('label').prependTo('.IG_POPUP_DIG .IG_POPUP_DIG_BODY');
 
     arrangeSettingHierarchy();
 }
@@ -773,6 +776,8 @@ export function openNewTab(link) {
     document.body.appendChild(a);
     a.click();
     a.remove();
+
+    setTimeout(() => { updateLoadingBar(false); }, 125);
 }
 
 /**

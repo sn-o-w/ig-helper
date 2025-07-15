@@ -6,7 +6,7 @@ import { onReadyMyDW } from "./functions/post";
 // ??? PLEASE CHANGE SETTING WITH MENU ???
 export const USER_SETTING = {
     'AUTO_RENAME': true,
-    'CHECK_UPDATE': true,
+    'CHECK_FOR_UPDATE': true,
     'DIRECT_DOWNLOAD_ALL': false,
     'DIRECT_DOWNLOAD_STORY': false,
     'DIRECT_DOWNLOAD_VISIBLE_RESOURCE': false,
@@ -21,7 +21,8 @@ export const USER_SETTING = {
     'REDIRECT_CLICK_USER_STORY_PICTURE': false,
     'RENAME_PUBLISH_DATE': true,
     'SCROLL_BUTTON': true,
-    'SKIP_VIEW_STORY_CONFIRM': false
+    'SKIP_VIEW_STORY_CONFIRM': false,
+    'CAPTURE_IMAGE_VIA_MEDIA_CACHE': true
 };
 
 export const PARENT_CHILD_MAPPING = {
