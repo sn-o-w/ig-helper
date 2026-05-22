@@ -2370,6 +2370,54 @@
     }
 
     /**
+     * resolveStoryMediaIdByTimestamp
+     * @description Identifies the currently visible story by comparing the
+     *              <time datetime> element in the viewer with taken_at_timestamp
+     *              from the API items array. More reliable than index-based DOM
+     *              mapping because it does not depend on CSS class names or
+     *              progress-bar structure.
+     *
+     * @param  {Object}  stories  - Full getStories() / getHighlightStories() response
+     * @return {?String}          - Best-matching item id, or null if undetermined
+     */
+    function resolveStoryMediaIdByTimestamp(stories) {
+        const items = stories?.data?.reels_media?.[0]?.items;
+        if (!items || items.length === 0) return null;
+
+        // Reuse the same multi-layout time-element selection that the rest of the
+        // script already relies on; exclude highlight-nav links and role="button"
+        // to avoid picking up unrelated timestamps.
+        const $time = $(
+            'body > div section:visible time[datetime]'
+        ).filter(function () {
+            return (
+                $(this).is(':visible') &&
+                $(this).closest('a[href^="/stories/highlights/"]').length === 0 &&
+                $(this).closest('[role="button"]').length === 0
+            );
+        }).first();
+
+        if ($time.length === 0) return null;
+
+        const visibleTs = Math.floor(new Date($time.attr('datetime')).getTime() / 1000);
+        if (!Number.isFinite(visibleTs) || visibleTs === 0) return null;
+
+        let bestId = null;
+        let minDiff = Infinity;
+
+        items.forEach(item => {
+            const diff = Math.abs((item.taken_at_timestamp || 0) - visibleTs);
+            if (diff < minDiff) {
+                minDiff = diff;
+                bestId = item.id;
+            }
+        });
+
+        logger('[resolveStoryMediaIdByTimestamp]', 'best match:', bestId, 'diff(s):', minDiff);
+        return bestId;  // always return best match — better than any index heuristic
+    }
+
+    /**
      * onStory
      * @description Trigger user's story download event or button display event.
      *
@@ -2418,6 +2466,11 @@
                         mediaId = item.id;
                     }
                 });
+
+                // FIX: timestamp-based match before fragile index/CSS fallbacks
+                if (mediaId == null) {
+                    mediaId = resolveStoryMediaIdByTimestamp(stories);
+                }
 
                 if (mediaId == null) {
                     let $header = getStoryProgress(username);
@@ -2842,6 +2895,11 @@
                         mediaId = item.id;
                     }
                 });
+
+                // FIX: timestamp-based match before fragile index/CSS fallbacks
+                if (mediaId == null) {
+                    mediaId = resolveStoryMediaIdByTimestamp(stories);
+                }
 
                 if (mediaId == null) {
                     let $header = getStoryProgress(username);
