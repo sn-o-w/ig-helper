@@ -210,8 +210,8 @@
         // page loading or unnecessary route
         if ($('div#splash-screen').length > 0 && !$('div#splash-screen').is(':hidden') ||
             location.pathname.match(/^\/(explore(\/.*)?|challenge\/?.*|direct\/?.*|qr\/?|accounts\/.*|emails\/.*|language\/?.*?|your_activity\/?.*|settings\/help(\/.*)?$)$/ig) ||
-            !location.hostname.startsWith('www.') || location.pathname.startsWith('/auth_platform/codeentry/') || location.pathname.startsWith('/challenge/') ||
-            location.pathname.startsWith('/consent/') || location.pathname.startsWith('/accounts/') ||
+            !location.hostname.startsWith('www.') || location.pathname.startsWith('/auth_platform/codeentry/') || location.pathname.startsWith('/auth_platform/recaptcha/') ||
+            location.pathname.startsWith('/challenge/') || location.pathname.startsWith('/consent/') || location.pathname.startsWith('/accounts/') ||
             ((location.pathname.endsWith('/followers/') || location.pathname.endsWith('/following/')) && ($(`body > div[class]:not([id^="mount"]) div div[role="dialog"]`).length > 0))
         ) {
             state.pageLoaded = false;
@@ -741,43 +741,48 @@
                     //}
 
                     // Make sure to first remove thumbnail button if still exists and highlight is a picture
-                    $element.find('img[referrerpolicy]').each(function () {
-                        $(this).on('load', function () {
-                            // OPTIMIZATION: cache $(this) (called 4 times in this handler)
-                            const $img = $(this);
-                            if (!$img.data('remove-thumbnail')) {
+                    if ($element.find('img[referrerpolicy]').length) {
+                        $element.find('img[referrerpolicy]').each(function () {
+                            $(this).one('load', function () {
+                                const $img = $(this);
+                                if ($img.data('remove-thumbnail')) {
+                                    return;
+                                }
+                                $img.data('remove-thumbnail', true);
                                 if ($element.find('.IG_DWHISTORY_THUMBNAIL').length === 0) {
-                                    $img.data('remove-thumbnail', true);
                                     $('.IG_DWHISTORY_THUMBNAIL').remove();
                                     logger('(highlight) Manually removing thumbnail button');
                                 }
                                 else {
-                                    $img.data('remove-thumbnail', true);
                                     logger('(highlight) Thumbnail button is not present for this picture');
                                 }
-                            }
+                            });
                         });
-                    });
-
+                    }
                     // If the highlight's <video> (blob src) is already present in the DOM by the time
                     // onHighlightsStory runs (e.g. script initialized late, after 'timeupdate' already
                     // fired once), insert the thumbnail button immediately instead of relying on a
                     // future 'timeupdate' event that may never come. The MutationObserver-based
                     // listener elsewhere only attaches to <video> nodes that are added *after* it
                     // was created, so a late init otherwise misses the button entirely.
-                    $element.find('video[src^="blob:"]').each(function () {
-                        const $video = $(this);
-                        if (!$video.data('modify-thumbnail')) {
-                            $video.data('modify-thumbnail', true);
-                            if ($element.find('.IG_DWHISTORY_THUMBNAIL').length === 0) {
-                                onHighlightsStoryThumbnail(false);
-                                logger('(highlight) Manually inserting thumbnail button (late init)');
+                    // Create separate late-thumbnail-insert flag to avoid conflict with
+                    // insert-thumbnail, which may be misset prematurely to true.
+    				// We also check for IG_DWHISTORY_THUMBNAIL so the button is only added if necessary.
+                    else if ($element.find('video[src^="blob:"]').length) {
+                        $element.find('video[src^="blob:"]').each(function () {
+                            const $video = $(this);
+                            if (!$video.data('late-thumbnail-insert')) {
+                                $video.data('late-thumbnail-insert', true);
+                                if ($element.find('.IG_DWHISTORY_THUMBNAIL').length === 0) {
+                                    onHighlightsStoryThumbnail(false);
+                                    logger('(highlight) Manually inserting thumbnail button (late init)');
+                                }
+                                else {
+                                    logger('(highlight) Thumbnail button already inserted');
+                                }
                             }
-                            else {
-                                logger('(highlight) Thumbnail button already inserted');
-                            }
-                        }
-                    });
+                        });
+                    }
 
                     // Try to use event listener 'timeupdate' in order to detect if highlight is a video
                     //$element.find('video').each(function(){
@@ -1018,7 +1023,7 @@
         // Disable video autoplay
         if (USER_SETTING.DISABLE_VIDEO_LOOPING) {
             $videos.each(function () {
-                $(this).on('ended', function () {
+                $(this).one('ended', function () {
                     const $vid = $(this);
                     if (!$vid.data('loop')) {
                         $vid.data('loop', true);
@@ -1032,7 +1037,7 @@
         // Modify video volume
         if (USER_SETTING.MODIFY_VIDEO_VOLUME) {
             $videos.each(function () {
-                $(this).on('play playing', function () {
+                $(this).one('play playing', function () {
                     const $vid = $(this);
                     if (!$vid.data('modify')) {
                         $vid.data('modify', true);
@@ -2390,7 +2395,7 @@
             // Disable video autoplay
             if (USER_SETTING.DISABLE_VIDEO_LOOPING) {
                 $videos.each(function () {
-                    $(this).on('ended', function () {
+                    $(this).one('ended', function () {
                         const $this = $(this);
                         if (!$this.data('loop')) {
                             let $element_play_button = $this.next().find('div[role="presentation"] > div svg > path[d^="M5.888"]').parents('button[role="button"], div[role="button"]');
@@ -3092,42 +3097,48 @@
                     //}
 
                     // Make sure to first remove thumbnail button if still exists and story is a picture
-                    $element.find('img[referrerpolicy]').each(function () {
-                        $(this).on('load', function () {
-                            const $img = $(this);
-                            if (!$img.data('remove-thumbnail')) {
+                    if ($element.find('img[referrerpolicy]').length) {
+                        $element.find('img[referrerpolicy]').each(function () {
+                            $(this).one('load', function () {
+                                const $img = $(this);
+                                if ($img.data('remove-thumbnail')) {
+                                    return;
+                                }
+                                $img.data('remove-thumbnail', true);
                                 if ($element.find('.IG_DWSTORY_THUMBNAIL').length === 0) {
-                                    $img.data('remove-thumbnail', true);
-                                    $('.IG_DWSTORY_THUMBNAIL').remove();
+    								$('.IG_DWSTORY_THUMBNAIL').remove();
                                     logger('(story) Manually removing thumbnail button');
                                 }
                                 else {
-                                    $img.data('remove-thumbnail', true);
                                     logger('(story) Thumbnail button is not present for this picture');
                                 }
-                            }
+                            });
                         });
-                    });
-
+                    }
                     // If the story's <video> (blob src) is already present in the DOM by the time
                     // onStory runs (e.g. script initialized late, after 'timeupdate' already fired
                     // once), insert the thumbnail button immediately instead of relying on a
                     // future 'timeupdate' event that may never come. The MutationObserver-based
                     // listener elsewhere only attaches to <video> nodes that are added *after* it
                     // was created, so a late init otherwise misses the button entirely.
-                    $element.find('video[src^="blob:"]').each(function () {
-                        const $video = $(this);
-                        if (!$video.data('modify-thumbnail')) {
-                            $video.data('modify-thumbnail', true);
-                            if ($element.find('.IG_DWSTORY_THUMBNAIL').length === 0) {
-                                onStoryThumbnail(false);
-                                logger('(story) Manually inserting thumbnail button (late init)');
+                    // Create separate late-thumbnail-insert flag to avoid conflict with
+                    // insert-thumbnail, which may be misset prematurely to true.
+    				// We also check for IG_DWSTORY_THUMBNAIL so the button is only added if necessary.
+                    else if ($element.find('video[src^="blob:"]').length) {
+                        $element.find('video[src^="blob:"]').each(function () {
+                            const $video = $(this);
+                            if (!$video.data('late-thumbnail-insert')) {
+                                $video.data('late-thumbnail-insert', true);
+                                if ($element.find('.IG_DWSTORY_THUMBNAIL').length === 0) {
+                                    onStoryThumbnail(false);
+                                    logger('(story) Manually inserting thumbnail button (late init)');
+                                }
+                                else {
+                                    logger('(story) Thumbnail button already inserted');
+                                }
                             }
-                            else {
-                                logger('(story) Thumbnail button already inserted');
-                            }
-                        }
-                    });
+                        });
+                    }
 
                     // Try to use event listener 'timeupdate' in order to detect if story is a video
                     //$element.find('video').each(function(){
@@ -6173,7 +6184,7 @@
                 "HOTKEY_CONFLICT_WARNING": "This hotkey may conflict with other settings.",
                 "HOTKEY_RESET": "Reset",
                 "USE_EXTERNAL_DOWNLOAD_MODE": "Use External Download Mode",
-                "USE_EXTERNAL_DOWNLOAD_MODE_INTRO": "Enabling this feature will cause the script to use extended download functions (such as GM_download) to download files, resolving the issue of missing files when download multiple files. \n\nPlease note: Enabling this feature may cause the file renaming function to malfunction. Please ensure that the download mode in your extended feature settings is set to Native."
+                "USE_EXTERNAL_DOWNLOAD_MODE_INTRO": "Enabling this feature will cause the script to use extended download functions (such as GM_download) to download files, resolving the issue of missing files when download multiple files.\n\nPlease note: Enabling this feature may cause the file renaming function to malfunction. Please ensure that the download mode in your extended feature settings is set to Native."
             }
         };
 
@@ -6716,7 +6727,7 @@
                             // Modify video volume
                             if (USER_SETTING.MODIFY_VIDEO_VOLUME) {
                                 $videos.each(function () {
-                                    $(this).on('play playing', function () {
+                                    $(this).one('play playing', function () {
                                         const $this = $(this);
                                         if (!$this.data('modify')) {
                                             $this.data('modify', true);
@@ -6732,14 +6743,14 @@
                                 const storyType = isHighlight ? 'highlight' : 'story';
 
                                 $videos.each(function () {
-                                    $(this).on('timeupdate', function () {
+                                    $(this).one('timeupdate', function () {
                                         const $this = $(this);
-                                        if (!$this.data('modify-thumbnail')) {
+                                        if (!$this.data('insert-thumbnail')) {
                                             let $video = $this;
                                             if ($video.parents('div[style][class]').filter(function () {
                                                 return $(this).width() == $video.width();
                                             }).find('.IG_DWSTORY_THUMBNAIL, .IG_DWHISTORY_THUMBNAIL').length === 0) {
-                                                $this.data('modify-thumbnail', true);
+                                                $this.data('insert-thumbnail', true);
 
                                                 if (isHighlight) {
                                                     onHighlightsStoryThumbnail(false);
