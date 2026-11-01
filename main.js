@@ -17,7 +17,7 @@
 // @name:zh-CN         IG小助手
 // @name:zh-TW         IG小精靈
 // @namespace          https://github.snkms.com/
-// @version            4.3.4
+// @version            4.3.5
 // @description        Download photos and videos from Instagram posts in one click, including Stories, Reels, and profile pictures.
 // @description:ar     نزّل صورًا ومقاطع فيديو من منشورات Instagram بنقرة واحدة، بما في ذلك القصص وReels وصور الملف الشخصي.
 // @description:de     Lade Fotos und Videos aus Instagram-Beiträgen mit einem Klick herunter, einschließlich Stories, Reels und Profilbildern.
@@ -1839,11 +1839,11 @@
                                 return 0;
                             });
 
-                            $target.append(`<a media-id="${mda.pk}" datetime="${mda.taken_at}" data-blob="true" data-needed="direct" data-path="${resource.code}" data-name="photo" data-type="jpg" data-username="${resource.owner.username}" data-globalIndex="${idx}" href="javascript:;" data-href="${mda.image_versions2.candidates[0].url}"><img width="100" src="${mda.image_versions2.candidates[0].url}" /><br/>- <span data-ih-locale="IMG">${_i18n("IMG")}</span> ${idx} -</a>`);
+                            $target.append(`<a media-id="${mda.pk}" datetime="${mda.taken_at || resource.taken_at}" data-blob="true" data-needed="direct" data-path="${resource.code}" data-name="photo" data-type="jpg" data-username="${resource.owner.username}" data-globalIndex="${idx}" href="javascript:;" data-href="${mda.image_versions2.candidates[0].url}"><img width="100" src="${mda.image_versions2.candidates[0].url}" /><br/>- <span data-ih-locale="IMG">${_i18n("IMG")}</span> ${idx} -</a>`);
                         }
                         // Video
                         else {
-                            $target.append(`<a media-id="${mda.pk}" datetime="${mda.taken_at}" data-blob="true" data-needed="direct" data-path="${resource.code}" data-name="video" data-type="mp4" data-username="${resource.owner.username}" data-globalIndex="${idx}" href="javascript:;" data-href="${mda.video_versions[0].url}"><img width="100" src="${mda.image_versions2.candidates[0].url}" /><br/>- <span data-ih-locale="VID">${_i18n("VID")}</span> ${idx} -</a>`);
+                            $target.append(`<a media-id="${mda.pk}" datetime="${mda.taken_at || resource.taken_at}" data-blob="true" data-needed="direct" data-path="${resource.code}" data-name="video" data-type="mp4" data-username="${resource.owner.username}" data-globalIndex="${idx}" href="javascript:;" data-href="${mda.video_versions[0].url}"><img width="100" src="${mda.image_versions2.candidates[0].url}" /><br/>- <span data-ih-locale="VID">${_i18n("VID")}</span> ${idx} -</a>`);
                             if (mda.video_dash_manifest) {
                                 state.GL_mediaDataCache[mda.pk] = mda;
                             }
@@ -3178,6 +3178,18 @@
             let targetURL = location.pathname.replace(/\/$/ig, '').split("/").at(-1);
             let videoThumbnailURL = "";
             let mediaId = null;
+            const selectThumbnail = item => {
+                const candidates = item?.image_versions2?.candidates || [];
+                const image = candidates.filter(candidate => candidate.url).reduce((best, candidate) =>
+                    !best || candidate.width > best.width ? candidate : best, null);
+                videoThumbnailURL = image?.url || item?.display_url || '';
+                if (videoThumbnailURL) {
+                    mediaId = item.id;
+                    if (USER_SETTING.RENAME_PUBLISH_DATE) {
+                        timestamp = item.taken_at_timestamp || item.taken_at;
+                    }
+                }
+            };
 
             updateLoadingBar(true);
 
@@ -3284,11 +3296,7 @@
                 logger('Fetch from memory cache:', username);
                 state.GL_dataCache.stories[username].data.xdt_api__v1__feed__reels_media.reels_media[0].items.forEach(item => {
                     if (item.id == targetURL) {
-                        videoThumbnailURL = item.display_url;
-                        if (USER_SETTING.RENAME_PUBLISH_DATE) {
-                            timestamp = item.taken_at_timestamp;
-                            mediaId = item.id;
-                        }
+                        selectThumbnail(item);
                     }
                 });
 
@@ -3307,11 +3315,7 @@
 
                 items.forEach(item => {
                     if (item.id == targetURL) {
-                        videoThumbnailURL = item.display_url;
-                        if (USER_SETTING.RENAME_PUBLISH_DATE) {
-                            timestamp = item.taken_at_timestamp;
-                            mediaId = item.id;
-                        }
+                        selectThumbnail(item);
                     }
                 });
 
@@ -3321,11 +3325,7 @@
 
                     $header.each(function (index) {
                         if ($(this).children().length > 0) {
-                            videoThumbnailURL = items[index].display_url;
-                            if (USER_SETTING.RENAME_PUBLISH_DATE) {
-                                timestamp = items[index].taken_at_timestamp;
-                                mediaId = items[index].id;
-                            }
+                            selectThumbnail(items[index]);
                         }
                     });
 
@@ -3335,11 +3335,7 @@
                             const $this = $(this);
                             if ($this.hasClass('x1lix1fw')) {
                                 if ($this.children().length > 0) {
-                                    videoThumbnailURL = items[index].display_url;
-                                    if (USER_SETTING.RENAME_PUBLISH_DATE) {
-                                        timestamp = items[index].taken_at_timestamp;
-                                        mediaId = items[index].id;
-                                    }
+                                    selectThumbnail(items[index]);
                                 }
                             }
                         });
@@ -3347,18 +3343,20 @@
                         // appear in from home page to story page
                         $('body > div section:visible ._ac0k > ._ac3r > div').each(function (index) {
                             if ($(this).children().hasClass('_ac3q')) {
-                                videoThumbnailURL = items[index].display_url;
-                                if (USER_SETTING.RENAME_PUBLISH_DATE) {
-                                    timestamp = items[index].taken_at_timestamp;
-                                    mediaId = items[index].id;
-                                }
+                                selectThumbnail(items[index]);
                             }
                         });
                     }
                 }
             }
 
-            saveFiles(videoThumbnailURL, {
+            if (!videoThumbnailURL) {
+                updateLoadingBar(false);
+                alert('Cannot find a thumbnail URL for this story.');
+                return;
+            }
+
+            await saveFiles(videoThumbnailURL, {
                 username,
                 sourceType: "thumbnail",
                 timestamp,
